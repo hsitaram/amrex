@@ -4,10 +4,14 @@
 namespace amrex
 {
     //================================================================================
-    void STLtools::read_ascii_stl_file(std::string fname)
+    void STLtools::read_ascii_stl_file(std::string fname,Real outpx,Real outpy,Real outpz)
     {
         std::string tmpline,tmp1,tmp2;
         int nlines=0;
+
+        m_outpx=outpx;
+        m_outpy=outpy;
+        m_outpz=outpz;
 
         Vector<char> fileCharPtr;
         ParallelDescriptor::ReadAndBcastFile(fname, fileCharPtr);
@@ -90,6 +94,48 @@ namespace amrex
         Gpu::copy(Gpu::hostToDevice,
                 m_tri_normals_h.begin(), m_tri_normals_h.end(),
                 m_tri_normals_d.begin());
+        
+        m_triangles.clear();
+        for(int tr=0;tr<m_num_tri;tr++)
+        {
+             Point a(m_tri_pts_h[tr*STLtools::m_ndata_per_tri+0],
+                     m_tri_pts_h[tr*STLtools::m_ndata_per_tri+1],
+                     m_tri_pts_h[tr*STLtools::m_ndata_per_tri+2]);
+
+             Point b(m_tri_pts_h[tr*STLtools::m_ndata_per_tri+3],
+                     m_tri_pts_h[tr*STLtools::m_ndata_per_tri+4],
+                     m_tri_pts_h[tr*STLtools::m_ndata_per_tri+5]);
+
+             Point c(m_tri_pts_h[tr*STLtools::m_ndata_per_tri+6],
+                     m_tri_pts_h[tr*STLtools::m_ndata_per_tri+7],
+                     m_tri_pts_h[tr*STLtools::m_ndata_per_tri+8]);
+    
+             m_triangles.push_back(Triangle(a,b,c));
+        }
+    
+        m_aabb_tree = new Tree(m_triangles.begin(),m_triangles.end());
+    }
+    //================================================================================
+    Real STLtools::getSignedDistance(Real x,Real y,Real z)
+    {
+
+        Real sign,dist;
+        int num_intersects=0;
+
+        Point crd(x,y,z);
+
+        //FIXME: get a point outside from user
+        Point point_outside(m_outpx,m_outpy,m_outpz);
+        Segment out_to_coord(point_outside,crd);
+        num_intersects=(*m_aabb_tree).number_of_intersected_primitives(out_to_coord);
+
+        sign=(num_intersects%2==0)?1.0:-1.0;
+    
+        Point closest_point = (*m_aabb_tree).closest_point(crd);
+        FT sqd = (*m_aabb_tree).squared_distance(crd);
+        dist=sqrt(sqd)*sign;
+
+        return(dist);
     }
     //================================================================================
     void STLtools::stl_to_markerfab(MultiFab& markerfab,Geometry geom,

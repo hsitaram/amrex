@@ -5,6 +5,7 @@
 #include <AMReX_EB2_IF_Ellipsoid.H>
 #include <AMReX_EB2_IF_Plane.H>
 #include <AMReX_EB2_IF_Sphere.H>
+#include <AMReX_EB2_IF_STL.H>
 #include <AMReX_EB2_IF_Torus.H>
 #include <AMReX_EB2_IF_Spline.H>
 #include <AMReX_EB2_GeometryShop.H>
@@ -174,6 +175,24 @@ Build (const Geometry& geom, int required_coarsening_level,
         EB2::TorusIF sf(large_radius, small_radius, center, has_fluid_inside);
 
         EB2::GeometryShop<EB2::TorusIF> gshop(sf);
+        EB2::Build(gshop, geom, required_coarsening_level,
+                   max_coarsening_level, ngrow, build_coarse_level_by_coarsening);
+    }
+    else if (geom_type == "STL")
+    {
+        std::string stl_fname;
+        Vector<Real> pointoutside;
+
+        pp.get("stl_file", stl_fname);
+        pp.getarr("outside_point",pointoutside);
+
+        bool has_fluid_inside=false;
+        pp.get("has_fluid_inside", has_fluid_inside);
+
+        EB2::STLIF stlif(stl_fname, has_fluid_inside,
+                pointoutside[0],pointoutside[1],pointoutside[2]);
+
+        EB2::GeometryShop<EB2::STLIF> gshop(stlif);
         EB2::Build(gshop, geom, required_coarsening_level,
                    max_coarsening_level, ngrow, build_coarse_level_by_coarsening);
     }

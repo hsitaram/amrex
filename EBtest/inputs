@@ -1,0 +1,5 @@
+prob_lo=  0   0  0
+prob_hi=  220 35 60
+ncells =  128 32 64
+stl_file=airfoil.stl
+outside_point=300.0 300.0 300.0
